@@ -5,6 +5,7 @@ import carpet.helpers.HopperCounter;
 import carpet.utils.Messenger;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
@@ -23,7 +24,7 @@ public class CounterCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> commandBuilder = literal("counter")
-                .requires(c -> CarpetSettings.hopperCounters)
+                .requires(c -> CarpetSettings.hopperCounters && Permissions.check(c, "carpet.command.counter", true))
                 .executes(c -> listAllCounters(c.getSource(), false))
                 .then(literal("reset")
                         .executes(c -> resetCounters(c.getSource())));

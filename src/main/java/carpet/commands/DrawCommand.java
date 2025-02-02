@@ -16,6 +16,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.List;
 import java.util.function.Predicate;
 
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.blocks.BlockInput;
@@ -40,7 +41,7 @@ public class DrawCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context)
     {
         LiteralArgumentBuilder<CommandSourceStack> command = literal("draw").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandDraw)).
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandDraw) || Permissions.check(player, "carpet.command.draw")).
                 then(literal("sphere").
                         then(argument("center", BlockPosArgument.blockPos()).
                                 then(argument("radius", IntegerArgumentType.integer(1)).

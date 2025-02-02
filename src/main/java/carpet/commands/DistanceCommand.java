@@ -5,6 +5,7 @@ import carpet.utils.CommandHelper;
 import carpet.utils.DistanceCalculator;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
@@ -17,7 +18,7 @@ public class DistanceCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> command = literal("distance").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandDistance)).
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandDistance) && Permissions.check(player, "carpet.command.distance", true)).
                 then(literal("from").
                         executes( (c) -> DistanceCalculator.setStart(c.getSource(), c.getSource().getPosition())).
                         then(argument("from", Vec3Argument.vec3()).

@@ -6,6 +6,7 @@ import carpet.utils.CommandHelper;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 
@@ -19,7 +20,7 @@ public class ProfileCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = literal("profile").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandProfile)).
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandProfile) && Permissions.check(player, "carpet.command.profile", true)).
                 executes( (c) -> healthReport(c.getSource(), 100)).
                 then(literal("health").
                         executes( (c) -> healthReport(c.getSource(), 100)).

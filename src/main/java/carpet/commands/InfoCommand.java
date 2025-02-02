@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -27,7 +28,7 @@ public class InfoCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> command = literal("info").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandInfo)).
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandInfo) && Permissions.check(player, "carpet.command.info", true)).
                 then(literal("block").
                         then(argument("block position", BlockPosArgument.blockPos()).
                                 executes( (c) -> infoBlock(

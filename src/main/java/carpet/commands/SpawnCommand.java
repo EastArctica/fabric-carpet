@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.DimensionArgument;
@@ -42,14 +43,17 @@ public class SpawnCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = literal("spawn").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandSpawn));
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandSpawn) || Permissions.check(player, "carpet.command.spawn"));
 
         literalargumentbuilder.
+                requires(Permissions.require("carpet.command.spawn.list", true)).
                 then(literal("list").
                         then(argument("pos", BlockPosArgument.blockPos()).
                                 executes( (c) -> listSpawns(c.getSource(), BlockPosArgument.getSpawnablePos(c, "pos"))))).
+                requires(Permissions.require("carpet.command.spawn.tracking", true)).
                 then(literal("tracking").
                         executes( (c) -> printTrackingReport(c.getSource())).
+                        requires(Permissions.require("carpet.command.spawn.tracking.start", true)).
                         then(literal("start").
                                 executes( (c) -> startTracking(c.getSource(), null)).
                                 then(argument("from", BlockPosArgument.blockPos()).
@@ -59,11 +63,14 @@ public class SpawnCommand
                                                         BoundingBox.fromCorners(
                                                                 BlockPosArgument.getSpawnablePos(c, "from"),
                                                                 BlockPosArgument.getSpawnablePos(c, "to"))))))).
+                        requires(Permissions.require("carpet.command.spawn.tracking.stop", true)).
                         then(literal("stop").
                                 executes( (c) -> stopTracking(c.getSource()))).
+                        requires(Permissions.require("carpet.command.spawn.tracking.type", true)).
                         then(argument("type", word()).
                                 suggests( (c, b) -> suggest(Arrays.stream(SpawnReporter.cachedMobCategories()).map(MobCategory::getName),b)).
                                 executes( (c) -> recentSpawnsForType(c.getSource(), getString(c, "type"))))).
+                requires(Permissions.require("carpet.command.spawn.test", true)).
                 then(literal("test").
                         executes( (c)-> runTest(c.getSource(), 72000, null)).
                         then(argument("ticks", integer(10)).
@@ -77,9 +84,11 @@ public class SpawnCommand
                                                 c.getSource(),
                                                 getInteger(c, "ticks"),
                                                 getString(c, "counter")))))).
+                requires(Permissions.require("carpet.command.spawn.mocking", true)).
                 then(literal("mocking").
                         then(argument("to do or not to do?", BoolArgumentType.bool()).
                             executes( (c) -> toggleMocking(c.getSource(), BoolArgumentType.getBool(c, "to do or not to do?"))))).
+                requires(Permissions.require("carpet.command.spawn.rates", true)).
                 then(literal("rates").
                         executes( (c) -> generalMobcaps(c.getSource())).
                         then(literal("reset").
@@ -92,13 +101,16 @@ public class SpawnCommand
                                                 c.getSource(),
                                                 getString(c, "type"),
                                                 getInteger(c, "rounds")))))).
+                requires(Permissions.require("carpet.command.spawn.mobcaps", true)).
                 then(literal("mobcaps").
                         executes( (c) -> generalMobcaps(c.getSource())).
+                        requires(Permissions.require("carpet.command.spawn.mobcaps.set", true)).
                         then(literal("set").
                                 then(argument("cap (hostile)", integer(1,1400)).
                                         executes( (c) -> setMobcaps(c.getSource(), getInteger(c, "cap (hostile)"))))).
                         then(argument("dimension", DimensionArgument.dimension()).
                                 executes( (c)-> mobcapsForDimension(c.getSource(), DimensionArgument.getDimension(c, "dimension"))))).
+                requires(Permissions.require("carpet.command.spawn.entities", true)).
                 then(literal("entities").
                         executes( (c) -> generalMobcaps(c.getSource()) ).
                         then(argument("type", string()).

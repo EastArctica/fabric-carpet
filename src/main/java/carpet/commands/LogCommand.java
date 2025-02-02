@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -29,7 +30,7 @@ public class LogCommand
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher, CommandBuildContext commandBuildContext)
     {
         LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("log").
-                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandLog)).
+                requires((player) -> CommandHelper.canUseCommand(player, CarpetSettings.commandLog) && Permissions.check(player, "carpet.command.log", true)).
                 executes((context) -> listLogs(context.getSource())).
                 then(Commands.literal("clear").
                         executes( (c) -> unsubFromAll(c.getSource(), c.getSource().getTextName())).
