@@ -97,6 +97,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -401,7 +402,7 @@ public class Auxiliary
                     yoffset = -armorstand.getBbHeight() + 0.3;
                 }
             }
-            armorstand.moveTo(
+            armorstand.snapTo(
                     pointLocator.vec.x,
                     //pointLocator.vec.y - ((!interactable && targetBlock == null)?0.41f:((targetBlock==null)?(armorstand.getHeight()+0.41):(armorstand.getHeight()-0.3))),
                     pointLocator.vec.y + yoffset,
@@ -684,12 +685,17 @@ public class Auxiliary
             try
             {
                 Component[] error = {null};
+                OptionalLong[] returnValue = {OptionalLong.empty()};
                 List<Component> output = new ArrayList<>();
                 s.getServer().getCommands().performPrefixedCommand(
-                        new SnoopyCommandSource(s, error, output),
+                        new SnoopyCommandSource(s, error, output, returnValue),
                         lv.get(0).getString());
+                if (returnValue[0].isEmpty())
+                {
+                    return Value.NULL;
+                }
                 return ListValue.of(
-                        NumericValue.ZERO,
+                        NumericValue.of(returnValue[0].getAsLong()),
                         ListValue.wrap(output.stream().map(FormattedTextValue::new)),
                         FormattedTextValue.of(error[0])
                 );

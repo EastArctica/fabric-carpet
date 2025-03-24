@@ -301,7 +301,7 @@ public class EntityValue extends Value
                     EntityType.ARROW, EntityType.DRAGON_FIREBALL, EntityType.FIREWORK_ROCKET,
                     EntityType.FIREBALL, EntityType.LLAMA_SPIT, EntityType.SMALL_FIREBALL,
                     EntityType.SNOWBALL, EntityType.SPECTRAL_ARROW, EntityType.EGG,
-                    EntityType.ENDER_PEARL, EntityType.EXPERIENCE_BOTTLE, EntityType.POTION,
+                    EntityType.ENDER_PEARL, EntityType.EXPERIENCE_BOTTLE, EntityType.SPLASH_POTION, EntityType.LINGERING_POTION,
                     EntityType.TRIDENT, EntityType.WITHER_SKULL, EntityType.FISHING_BOBBER, EntityType.SHULKER_BULLET
             );
             Set<EntityType<?>> deads = Set.of(
@@ -530,15 +530,16 @@ public class EntityValue extends Value
         put("spawn_point", (e, a) -> {
             if (e instanceof ServerPlayer spe)
             {
-                if (spe.getRespawnPosition() == null)
+                if (spe.getRespawnConfig() == null)
                 {
                     return Value.FALSE;
                 }
+                ServerPlayer.RespawnConfig spec = spe.getRespawnConfig();
                 return ListValue.of(
-                        ValueConversions.of(spe.getRespawnPosition()),
-                        ValueConversions.of(spe.getRespawnDimension()),
-                        new NumericValue(spe.getRespawnAngle()),
-                        BooleanValue.of(spe.isRespawnForced())
+                        ValueConversions.of(spec.pos()),
+                        ValueConversions.of(spec.dimension()),
+                        new NumericValue(spec.angle()),
+                        BooleanValue.of(spec.forced())
                 );
             }
             return Value.NULL;
@@ -700,7 +701,7 @@ public class EntityValue extends Value
             return Value.NULL;
         });
 
-        put("selected_slot", (e, a) -> e instanceof Player p ? new NumericValue(p.getInventory().selected) : Value.NULL);
+        put("selected_slot", (e, a) -> e instanceof Player p ? new NumericValue(p.getInventory().getSelectedSlot()) : Value.NULL);
 
         put("active_block", (e, a) -> {
             if (e instanceof ServerPlayer sp)
@@ -902,16 +903,11 @@ public class EntityValue extends Value
         }
         if (e instanceof ServerPlayer sp)
         {
-            // this forces position but doesn't angles for some reason. Need both in the API in the future.
-            EnumSet<Relative> set = EnumSet.noneOf(Relative.class);
-            set.add(Relative.X_ROT);
-            set.add(Relative.Y_ROT);
-
-            sp.connection.teleport(new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yaw, pitch), set);
+            sp.connection.teleport(x, y, z, yaw, pitch);
         }
         else
         {
-            e.moveTo(x, y, z, yaw, pitch);
+            e.snapTo(x, y, z, yaw, pitch);
             // we were sending to players for not-living entites, that were untracked. Living entities should be tracked.
             //((ServerWorld) e.getEntityWorld()).getChunkManager().sendToNearbyPlayers(e, new EntityS2CPacket.(e));
             if (e instanceof LivingEntity le)
@@ -1366,7 +1362,7 @@ public class EntityValue extends Value
             }
             if (a == null)
             {
-                spe.setRespawnPosition(null, null, 0, false, false);
+                spe.setRespawnPosition(null, false);
             }
             else if (a instanceof ListValue lv)
             {
@@ -1389,7 +1385,7 @@ public class EntityValue extends Value
                         }
                     }
                 }
-                spe.setRespawnPosition(world, pos, angle, forced, false);
+                spe.setRespawnPosition(new ServerPlayer.RespawnConfig(world, pos, angle, forced), false);
             }
             else if (a instanceof BlockValue bv)
             {
@@ -1397,11 +1393,11 @@ public class EntityValue extends Value
                 {
                     throw new InternalExpressionException("block for spawn modification should be localised in the world");
                 }
-                spe.setRespawnPosition(bv.getWorld().dimension(), bv.getPos(), e.getYRot(), true, false); // yaw
+                spe.setRespawnPosition(new ServerPlayer.RespawnConfig(bv.getWorld().dimension(), bv.getPos(), e.getYRot(), true), false); // yaw
             }
             else if (a.isNull())
             {
-                spe.setRespawnPosition(null, null, 0, false, false);
+                spe.setRespawnPosition(null, false);
             }
             else
             {

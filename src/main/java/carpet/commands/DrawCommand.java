@@ -241,7 +241,7 @@ public class DrawCommand
         }
         if (CarpetSettings.fillUpdates)
         {
-            list.forEach(blockpos1 -> world.blockUpdated(blockpos1, world.getBlockState(blockpos1).getBlock()));
+            list.forEach(blockpos1 -> world.updateNeighborsAt(blockpos1, world.getBlockState(blockpos1).getBlock()));
         }
         Messenger.m(ctx.getSource(), "gi Filled " + affected + " blocks");
         return affected;
@@ -291,7 +291,7 @@ public class DrawCommand
 
         if (CarpetSettings.fillUpdates)
         {
-            list.forEach(p -> world.blockUpdated(p, world.getBlockState(p).getBlock()));
+            list.forEach(p -> world.updateNeighborsAt(p, world.getBlockState(p).getBlock()));
         }
 
         Messenger.m(source, "gi Filled " + affected + " blocks");
@@ -390,7 +390,7 @@ public class DrawCommand
 
             for (BlockPos blockpos1 : list) {
                 Block blokc = world.getBlockState(blockpos1).getBlock();
-                world.blockUpdated(blockpos1, blokc);
+                world.updateNeighborsAt(blockpos1, blokc);
             }
         }
 
@@ -441,7 +441,7 @@ public class DrawCommand
 
             for (BlockPos blockpos1 : list) {
                 Block blokc = world.getBlockState(blockpos1).getBlock();
-                world.blockUpdated(blockpos1, blokc);
+                world.updateNeighborsAt(blockpos1, blokc);
             }
         }
 

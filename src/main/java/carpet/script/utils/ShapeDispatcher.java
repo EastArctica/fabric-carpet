@@ -26,6 +26,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.ByteTag;
@@ -34,16 +35,19 @@ import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.FloatTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.NumericTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -236,7 +240,7 @@ public class ShapeDispatcher
     public static ExpiringShape fromTag(CompoundTag tag, Level level)
     {
         Map<String, Value> options = new HashMap<>();
-        for (String key : tag.getAllKeys())
+        for (String key : tag.keySet())
         {
             Param decoder = Param.of.get(key);
             if (decoder == null)
@@ -250,7 +254,7 @@ public class ShapeDispatcher
         Value shapeValue = options.get("shape");
         if (shapeValue == null)
         {
-            CarpetScriptServer.LOG.info("Shape id missing in " + String.join(", ", tag.getAllKeys()));
+            CarpetScriptServer.LOG.info("Shape id missing in " + String.join(", ", tag.keySet()));
             return null;
         }
         BiFunction<Map<String, Value>, RegistryAccess, ExpiringShape> factory = ExpiringShape.shapeProviders.get(shapeValue.getString());
@@ -433,10 +437,8 @@ public class ShapeDispatcher
 
         protected ParticleOptions replacementParticle(RegistryAccess regs)
         {
-            String particleName = fa == 0 ?
-                    String.format(Locale.ROOT, "dust %.1f %.1f %.1f 1.0", r, g, b) :
-                    String.format(Locale.ROOT, "dust %.1f %.1f %.1f 1.0", fr, fg, fb);
-            return getParticleData(particleName, regs);
+            boolean bg = fa == 0;
+            return new DustParticleOptions(ARGB.colorFromFloat(1.0f, (bg ?r:fr), (bg ?r:fr), (bg ?r:fr)), 1);
         }
 
 
@@ -724,7 +726,7 @@ public class ShapeDispatcher
             }
             else
             {
-                this.item = ItemStack.parseOptional(regs, ((NBTSerializableValue) options.get("item")).getCompoundTag());
+                this.item = ItemStack.CODEC.parse(regs.createSerializationContext(NbtOps.INSTANCE), ((NBTSerializableValue) options.get("item")).getCompoundTag() ).result().orElse(null);
             }
             blockLight = NumericValue.asNumber(options.getOrDefault("blocklight", optional.get("blocklight"))).getInt();
             if (blockLight > 15)
@@ -1067,7 +1069,7 @@ public class ShapeDispatcher
                 }
                 if (fa > 0.0f)
                 {
-                    ParticleOptions locparticledata = getParticleData(String.format(Locale.ROOT, "dust %.1f %.1f %.1f %.1f", fr, fg, fb, fa), p.level().registryAccess());
+                    ParticleOptions locparticledata = new DustParticleOptions(ARGB.colorFromFloat(1.0f, fr, fg, fb), 1);
                     for (Vec3 v : getAlterPoint(p))
                     {
                         p.serverLevel().sendParticles(p, locparticledata, true, true,
@@ -1557,11 +1559,11 @@ public class ShapeDispatcher
         {
             if (tag instanceof final ListTag list)
             {
-                return ListValue.wrap(list.stream().map(x -> BooleanValue.of(((NumericTag) x).getAsNumber().doubleValue() != 0)));
+                return ListValue.wrap(list.stream().map(x -> BooleanValue.of(((NumericTag) x).doubleValue() != 0)));
             }
             if (tag instanceof final ByteTag booltag)
             {
-                return BooleanValue.of(booltag.getAsByte() != 0);
+                return BooleanValue.of(booltag.byteValue() != 0);
             }
             return Value.NULL;
         }
@@ -1597,7 +1599,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new StringValue(tag.getAsString());
+            return new StringValue(tag.asString().get());
         }
     }
 
@@ -1641,9 +1643,9 @@ public class ShapeDispatcher
         {
             BlockState bs = NbtUtils.readBlockState(level.holderLookup(Registries.BLOCK), (CompoundTag) tag);
             CompoundTag compoundTag2 = null;
-            if (((CompoundTag) tag).contains("TileEntityData", 10))
+            if (((CompoundTag) tag).contains("TileEntityData"))
             {
-                compoundTag2 = ((CompoundTag) tag).getCompound("TileEntityData");
+                compoundTag2 = ((CompoundTag) tag).getCompound("TileEntityData").get();
             }
             return new BlockValue(bs, compoundTag2);
         }
@@ -1661,7 +1663,7 @@ public class ShapeDispatcher
         public Value validate(Map<String, Value> options, MinecraftServer server, Value value)
         {
             ItemStack item = ValueConversions.getItemStackFromValue(value, true, server.registryAccess());
-            return new NBTSerializableValue(item.saveOptional(server.registryAccess()));
+            return new NBTSerializableValue(ItemStack.CODEC.encodeStart(server.registryAccess().createSerializationContext(NbtOps.INSTANCE), item).result().orElse(null));
         }
 
         @Override
@@ -1722,7 +1724,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return FormattedTextValue.deserialize(tag.getAsString(), level.registryAccess());
+            return FormattedTextValue.deserialize(tag.asString().get(), level.registryAccess());
         }
     }
 
@@ -1816,7 +1818,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return BooleanValue.of(((ByteTag) tag).getAsByte() > 0);
+            return BooleanValue.of(((ByteTag) tag).byteValue() > 0);
         }
     }
 
@@ -1830,7 +1832,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((FloatTag) tag).getAsFloat());
+            return new NumericValue(((FloatTag) tag).floatValue());
         }
 
         @Override
@@ -1869,7 +1871,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((FloatTag) tag).getAsFloat());
+            return new NumericValue(((FloatTag) tag).floatValue());
         }
 
         @Override
@@ -1890,7 +1892,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((IntTag) tag).getAsInt());
+            return new NumericValue(((IntTag) tag).intValue());
         }
 
         @Override
@@ -1911,7 +1913,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((IntTag) tag).getAsInt());
+            return new NumericValue(((IntTag) tag).intValue());
         }
 
         @Override
@@ -1942,7 +1944,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((FloatTag) tag).getAsFloat());
+            return new NumericValue(((FloatTag) tag).floatValue());
         }
 
         @Override
@@ -2034,9 +2036,9 @@ public class ShapeDispatcher
         {
             ListTag ctag = (ListTag) tag;
             return ListValue.of(
-                    new NumericValue(ctag.getDouble(0)),
-                    new NumericValue(ctag.getDouble(1)),
-                    new NumericValue(ctag.getDouble(2))
+                    new NumericValue(ctag.getDouble(0).orElseThrow()),
+                    new NumericValue(ctag.getDouble(1).orElseThrow()),
+                    new NumericValue(ctag.getDouble(2).orElseThrow())
             );
         }
 
@@ -2081,11 +2083,11 @@ public class ShapeDispatcher
             List<Value> points = new ArrayList<>();
             for (int i = 0, ll = ltag.size(); i < ll; i++)
             {
-                ListTag ptag = ltag.getList(i);
+                ListTag ptag = ltag.getList(i).orElseThrow();
                 points.add(ListValue.of(
-                        new NumericValue(ptag.getDouble(0)),
-                        new NumericValue(ptag.getDouble(1)),
-                        new NumericValue(ptag.getDouble(2))
+                        new NumericValue(ptag.getDouble(0).orElseThrow()),
+                        new NumericValue(ptag.getDouble(1).orElseThrow()),
+                        new NumericValue(ptag.getDouble(2).orElseThrow())
                 ));
             }
             return ListValue.wrap(points);
@@ -2120,7 +2122,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((IntTag) tag).getAsInt());
+            return new NumericValue(((IntTag) tag).intValue());
         }
 
         @Override
@@ -2162,7 +2164,7 @@ public class ShapeDispatcher
         @Override
         public Value decode(Tag tag, Level level)
         {
-            return new NumericValue(((IntTag) tag).getAsInt());
+            return new NumericValue(((IntTag) tag).intValue());
         }
     }
 
